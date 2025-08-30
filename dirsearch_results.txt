@@ -1,0 +1,5 @@
+# Dirsearch started Sat Aug 30 14:24:34 2025 as: /usr/lib/python3/dist-packages/dirsearch/dirsearch.py -u www.bugbountytraining.com -w /usr/share/wordlists/common.txt -e php,html,txt -o dirsearch_results.txt
+
+301   178B   https://www.bugbountytraining.com/assets    -> REDIRECTS TO: https://www.bugbountytraining.com/assets/
+301   178B   https://www.bugbountytraining.com/dev    -> REDIRECTS TO: https://www.bugbountytraining.com/dev/
+200     9KB  https://www.bugbountytraining.com/index.php
