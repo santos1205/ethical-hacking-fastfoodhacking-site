@@ -5,7 +5,7 @@
 **Report Date:** August 30, 2025  
 **Target:** Fastfoodhackings Application  
 **URL:** https://www.bugbountytraining.com/fastfoodhackings/  
-**Status:** 🔄 In Progress - Visual Reconnaissance Phase  
+**Status:** 🔄 In Progress - Crawling for Endpoints Phase  
 **Tester:** Security Assessment Team  
 
 ## Table of Contents
@@ -18,7 +18,6 @@
    - [FFHK-002: Information Disclosure - Sensitive Panels Indexed](#ffhk-002-information-disclosure---sensitive-panels-indexed)
    - [FFHK-003: Cross-Site Scripting (XSS) Vulnerabilities](#ffhk-003-cross-site-scripting-xss-vulnerabilities)
    - [FFHK-004: Open Redirect Vulnerability](#ffhk-004-open-redirect-vulnerability)
-   - [FFHK-005: Potential Local File Inclusion](#ffhk-005-potential-local-file-inclusion)
 4. [URL Enumeration Results](#url-enumeration-results)
 5. [Next Steps](#next-steps)
 
@@ -28,7 +27,7 @@ This report details the results of a penetration test conducted on the **Fastfoo
 
 ### Key Findings
 
-The assessment has identified **five significant vulnerabilities** across multiple severity levels:
+The assessment has identified **four significant vulnerabilities** across multiple severity levels:
 
 **⚠️ Origin IP Address Exposure**  
 The server's real IP address and its specific technology stack are exposed, allowing attackers to bypass Cloudflare security protections and customize attacks for the identified software.
@@ -41,9 +40,6 @@ Multiple XSS injection points discovered in the main application, allowing for c
 
 **🔓 Open Redirect Vulnerability**  
 The application redirects users to external domains without proper validation, enabling phishing and credential theft attacks.
-
-**📁 Potential Local File Inclusion**  
-API endpoints may allow unauthorized file access through path traversal techniques.
 
 **Current Status:** Assessment is proceeding to Visual Reconnaissance phase for deeper application analysis.
 
@@ -74,7 +70,6 @@ This section contains a detailed description of each identified vulnerability, i
 | FFHK-002 | Information Disclosure - Sensitive Panels Indexed | 🔴 High | 🔄 Active |
 | FFHK-003 | Cross-Site Scripting (XSS) Vulnerabilities | 🔴 High | 🔄 Active |
 | FFHK-004 | Open Redirect Vulnerability | 🔴 High | 🔄 Active |
-| FFHK-005 | Potential Local File Inclusion | 🟡 Medium | 🔄 Active |
 
 ### FFHK-001: Information Disclosure - Origin IP Address Exposed
 
@@ -162,7 +157,7 @@ Multiple Cross-Site Scripting (XSS) vulnerabilities were identified in the FastF
 ```
 XSS INJECTION POINT:
 └── index.php Parameter Injection:
-    └── ?act=--%3E%3Cimg%20src=x%20onerror=alert(2) [200 OK]
+    └── https://www.bugbountytraining.com/fastfoodhackings/index.php?act=--%3E%3Cimg%20src=x%20onerror=alert(2) [200 OK]
 ```
 
 #### Impact
@@ -174,13 +169,17 @@ XSS INJECTION POINT:
 #### Recommended Remediation
 1. **Input Sanitization:**
    ```php
+   // Example for index.php
    $safe_input = htmlspecialchars($_GET['act'], ENT_QUOTES, 'UTF-8');
+   
+   // Test URL: https://www.bugbountytraining.com/fastfoodhackings/index.php?act=<script>alert('XSS')</script>
    ```
 2. **Content Security Policy:**
    ```
    Content-Security-Policy: default-src 'self'; script-src 'self'
    ```
 3. **Output Encoding:** Properly encode all user-controlled data before rendering
+4. **Parameter Validation:** Validate and sanitize all GET/POST parameters before processing
 
 ### FFHK-004: Open Redirect Vulnerability
 
@@ -212,48 +211,16 @@ CONFIRMED EXTERNAL REDIRECTS:
 #### Recommended Remediation
 1. **URL Validation:**
    ```php
+   // Example validation for go.php
    $allowed_domains = ['bugbountytraining.com'];
    $parsed_url = parse_url($_GET['returnUrl']);
    if (!in_array($parsed_url['host'], $allowed_domains)) {
-       // Block redirect
+       // Block redirect - Test with: 
+       // https://www.bugbountytraining.com/fastfoodhackings/go.php?returnUrl=https://malicious.com
    }
    ```
 2. **Whitelist Approach:** Only allow predefined redirect destinations
 3. **User Confirmation:** Display warning for external redirects
-
-### FFHK-005: Potential Local File Inclusion
-
-**ID:** FFHK-005  
-**Severity:** 🟡 Medium  
-**Category:** Local File Inclusion  
-**CVSS Score:** 6.5 (AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N)  
-
-#### Description
-The `/api/loader.php` endpoint accepts a file parameter that may allow unauthorized access to local files through path traversal techniques. This requires further manual testing to confirm exploitability.
-
-#### Discovered Endpoint
-```
-POTENTIAL LFI ENDPOINT:
-└── https://bugbountytraining.com/fastfoodhackings/api/loader.php
-    └── ?f=/reviews.php [200 OK]
-```
-
-#### Potential Impact
-- **File Disclosure:** Access to sensitive configuration files
-- **Source Code Exposure:** Reveal application logic and credentials
-- **System Information:** Access to system files and logs
-- **Privilege Escalation:** Combined with other vulnerabilities
-
-#### Recommended Remediation
-1. **File Whitelist:**
-   ```php
-   $allowed_files = ['reviews.php', 'menu.php', 'locations.php'];
-   if (!in_array($_GET['f'], $allowed_files)) {
-       // Deny access
-   }
-   ```
-2. **Path Sanitization:** Remove directory traversal sequences
-3. **Access Controls:** Implement proper file access permissions
 
 ## URL Enumeration Results
 
@@ -277,7 +244,6 @@ During the comprehensive URL enumeration phase using Dirsearch, the following at
 - `/fastfoodhackings/book.php` - Booking system
 
 #### API Endpoints
-- `/fastfoodhackings/api/loader.php` - File loader (LFI risk)
 - `/fastfoodhackings/api/book.php` - Booking API
 - `/fastfoodhackings/api/invites.php` - Invitation system
 
@@ -304,17 +270,17 @@ During the comprehensive URL enumeration phase using Dirsearch, the following at
 - [x] **5. WAYBACK MACHINE**
 - [x] **6. COMBINING & DE-DUPLICATING URLS**
 
-#### Current Phase
-- [ ] **7. VISUAL RECONNAISSANCE** ⬅️ **IN PROGRESS**
+#### Completed Phase
+- [x] **7. VISUAL RECONNAISSANCE**
 
-#### Upcoming Phases - Active Reconnaissance
-- [ ] **8. CRAWLING FOR ENDPOINTS**
+#### Current Phase
+- [ ] **8. CRAWLING FOR ENDPOINTS** ⬅️ **IN PROGRESS**
 - [ ] **9. FINDING SECRETS IN JAVASCRIPT FILES**
 - [ ] **10. NETWORK & SERVICE SCANNING**
 - [ ] **11. ENDPOINT & PARAMETER DISCOVERY**
 - [ ] **12. CMS DETECTION & SCANNING**
 
-#### Upcoming Phases - Vulnerability Analysis & Exploitation
+#### Upcoming Phases - Active Reconnaissance
 - [ ] **13. AUTOMATED VULNERABILITY SCANNING**
 - [ ] **14. SQL INJECTION TESTING**
 - [ ] **15. CROSS-SITE SCRIPTING (XSS) TESTING**
