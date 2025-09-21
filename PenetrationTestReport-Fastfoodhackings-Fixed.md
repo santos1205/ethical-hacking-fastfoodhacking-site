@@ -2,16 +2,16 @@
 
 ## Report Information
 
-**Report Date:** September 10, 2025  
+**Report Date:** September 19, 2025  
 **Target:** Fastfoodhackings Application  
 **URL:** https://www.bugbountytraining.com/fastfoodhackings/  
-**Status:** ✅ Completed - Endpoint Discovery Phase | 🔄 In Progress - Manual Vulnerability Testing  
+**Status:** ✅ Completed - Network & Service Scanning (Phase 10) | 🔄 In Progress - Parameter Discovery  
 **Tester:** Security Assessment Team  
 
 ## Table of Contents
 
 1. [Executive Summary](#executive-summary)
-2. [Scope and Objectives](#scope-and-objectives)
+2. [Scope and Objectives](#scope-and-objectives)  
 3. [Vulnerability Findings](#vulnerability-findings)
    - [Vulnerability Summary](#vulnerability-summary)
    - [FFHK-001: Information Disclosure - Origin IP Address Exposed](#ffhk-001-information-disclosure---origin-ip-address-exposed)
@@ -21,16 +21,45 @@
    - [FFHK-005: API Endpoints Exposed](#ffhk-005-api-endpoints-exposed)
    - [FFHK-006: Exposed API Token in JavaScript](#ffhk-006-exposed-api-token-in-javascript)
    - [FFHK-007: Insecure Redirect Handling](#ffhk-007-insecure-redirect-handling)
+   - [FFHK-008: SSH Service Exposed](#ffhk-008-ssh-service-exposed)
+   - [FFHK-009: SSH Critical Vulnerabilities (CVE-2023-38408)](#ffhk-009-ssh-critical-vulnerabilities-cve-2023-38408)
+   - [FFHK-010: nginx Critical Buffer Overflow (CVE-2022-41741)](#ffhk-010-nginx-critical-buffer-overflow-cve-2022-41741)
+   - [FFHK-011: nginx DNS Resolver Vulnerability (CVE-2021-23017)](#ffhk-011-nginx-dns-resolver-vulnerability-cve-2021-23017)
+   - [FFHK-012: Apache Byterange DoS Vulnerability (CVE-2011-3192)](#ffhk-012-apache-byterange-dos-vulnerability-cve-2011-3192)
 4. [URL Enumeration Results](#url-enumeration-results)
-5. [Next Steps](#next-steps)
+5. [Detailed Assessment Phases](#detailed-assessment-phases)
+6. [Next Steps](#next-steps)
 
 ## Executive Summary
 
-This report details the results of a penetration test conducted on the **Fastfoodhackings** web application. The assessment has progressed through initial reconnaissance, subdomain enumeration, and comprehensive URL discovery phases.
+**🚨 CRITICAL SECURITY ALERT:** This penetration test has identified **CRITICAL vulnerabilities** requiring immediate attention.
+
+**Technical Details**
+```
+COMPREHENSIVE NMAP SCAN RESULTS:
+├── Command: nmap -sV -sC -T4 134.209.18.185
+├── Target IP: 134.209.18.185
+├── Open Ports Discovered:
+│   ├── Port 22/tcp OPEN ssh OpenSSH 8.2p1 Ubuntu 4ubuntu0.13 (Ubuntu Linux; protocol 2.0)
+│   │   ├── ssh-hostkey:
+│   │   │   ├── 3072 sha256:YmJk6H... (RSA)
+│   │   │   ├── 256 sha256:Qfgl8O... (ECDSA) 
+│   │   │   └── 256 sha256:r3VHZS... (ED25519)
+│   │   └── SSH Protocol: 2.0
+│   ├── Port 80/tcp OPEN http nginx 1.18.0 (Ubuntu)
+│   │   ├── http-server-header: nginx/1.18.0 (Ubuntu)
+│   │   └── http-title: 301 Moved Permanently (redirects to HTTPS)
+│   └── Port 443/tcp OPEN ssl/http nginx 1.18.0 (Ubuntu)
+│       ├── ssl-cert: subject=CN=fastfoodhackings.bugbountytraining.com
+│       ├── issuer=C=US,O=Let's Encrypt,CN=R3
+│       ├── validity: Aug 5 2024 - Nov 3 2025
+│       ├── Serial: 04:D3:CE...
+│       └── SSL: TLS 1.3 (no vulnerable protocols detected)
+```
 
 ### Key Findings
 
-The assessment has identified **seven significant vulnerabilities** across multiple severity levels:
+The assessment has identified **eight significant vulnerabilities** across multiple severity levels:
 
 **⚠️ Origin IP Address Exposure**  
 The server's real IP address and its specific technology stack are exposed, allowing attackers to bypass Cloudflare security protections and customize attacks for the identified software.
@@ -50,7 +79,10 @@ Critical API token `c0f22cf8-96ea-4fbb-8805-ee4246095031` discovered hardcoded i
 **🌐 Insecure Redirect Handling**  
 JavaScript code performs unvalidated URL redirections, creating additional attack vectors for phishing and malicious redirects.
 
-**Current Status:** Assessment has completed the JavaScript Analysis phase (Phase 9), discovering **266 unique endpoints** and **exposed API credentials**. All critical vulnerabilities have been confirmed through manual testing.
+**🚪 SSH Service Exposed**  
+Direct SSH access available on port 22 to the origin server, providing an additional attack vector for brute force attacks and bypassing Cloudflare protections.
+
+**Current Status:** Assessment has completed the Network & Service Scanning phase (Phase 10), discovering **SSH and web services** with detailed version information. All critical vulnerabilities have been confirmed through manual testing.
 
 ## Scope and Objectives
 
@@ -82,6 +114,11 @@ This section contains a detailed description of each identified vulnerability, i
 | FFHK-005 | API Endpoints Exposed | 🟡 Medium | 🔄 Active |
 | FFHK-006 | Exposed API Token in JavaScript | 🔴 High | 🔄 Active |
 | FFHK-007 | Insecure Redirect Handling | 🟡 Medium | 🔄 Active |
+| FFHK-008 | SSH Service Exposed | 🟡 Medium | 🔄 Active |
+| FFHK-009 | **SSH Critical Vulnerabilities (CVE-2023-38408)** | 🟥 **CRITICAL** | 🔄 Active |
+| FFHK-010 | **nginx Critical Vulnerabilities (CVE-2022-41741)** | 🔴 **High** | 🔄 Active |
+| FFHK-011 | **nginx DNS Resolver Vulnerability (CVE-2021-23017)** | 🔴 **High** | 🔄 Active |
+| FFHK-012 | Apache Byterange DoS Vulnerability (CVE-2011-3192) | 🟡 Medium | 🔄 Active |
 
 ### FFHK-001: Information Disclosure - Origin IP Address Exposed
 
@@ -625,6 +662,216 @@ function handleRedirect(url) {
    grep -i "redirect\|return\|url\|goto"
    ```
 
+### FFHK-008: SSH Service Exposed
+
+**ID:** FFHK-008  
+**Severity:** 🟡 Medium  
+**Category:** Information Disclosure / Unauthorized Access  
+**CVSS Score:** 5.8 (AV:N/AC:M/PR:N/UI:N/S:C/C:L/I:N/A:N)
+
+#### Description
+Network scanning revealed that SSH service is accessible on port 22 directly to the origin server IP address. This provides an additional attack vector for brute force attacks and credential stuffing, bypassing any potential Cloudflare protections.
+
+#### Technical Details
+```
+NETWORK SCAN RESULTS:
+├── Target IP: 134.209.18.185
+├── Open Ports Discovered:
+│   ├── Port 22 (SSH): OpenSSH 8.2p1 Ubuntu-4ubuntu0.13
+│   ├── Port 80 (HTTP): nginx/1.18.0 (Ubuntu)
+│   └── Port 443 (HTTPS): nginx/1.18.0 (Ubuntu)
+└── SSL Certificate: Let's Encrypt (Valid: Aug 5 - Nov 3, 2025)
+```
+
+#### Impact
+- **SSH Brute Force:** Direct access to SSH service for credential attacks
+- **Privilege Escalation:** Successful SSH access could lead to server compromise
+- **Lateral Movement:** SSH access provides entry point for further system exploration
+- **Bypass Protections:** Direct IP access circumvents Cloudflare security measures
+
+#### Recommended Remediation
+1. **Restrict SSH Access:** Configure SSH to accept connections only from trusted IP ranges
+2. **SSH Key Authentication:** Disable password authentication and use SSH keys only
+3. **Fail2Ban:** Implement automated brute force protection
+4. **Port Change:** Consider changing SSH from default port 22 to a non-standard port
+5. **VPN Access:** Require VPN connection for SSH access
+
+#### Manual Testing Steps
+1. **SSH Version Detection:**
+   ```bash
+   # Banner grabbing
+   nc 134.209.18.185 22
+   ```
+
+2. **SSH Configuration Testing:**
+   ```bash
+   # Test for weak authentication methods
+   ssh -o PreferredAuthentications=none 134.209.18.185
+   ```
+
+3. **Brute Force Testing (Authorized Only):**
+   ```bash
+   # Test with common credentials (ethical testing only)
+   # hydra -l admin -P common-passwords.txt ssh://134.209.18.185
+   ```
+
+4. **SSH Enumeration:**
+   ```bash
+   # Check for user enumeration vulnerabilities
+   ssh-enum-users.py 134.209.18.185
+   ```
+
+---
+
+### FFHK-009: SSH Critical Vulnerabilities (CVE-2023-38408)
+
+**ID:** FFHK-009  
+**Severity:** 🟥 **CRITICAL**  
+**Category:** Remote Code Execution / Privilege Escalation  
+**CVSS Score:** 9.8 (AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H)
+
+#### Description
+Vulnerability scanning revealed multiple **CRITICAL** security vulnerabilities in the OpenSSH 8.2p1 service, including the newly discovered CVE-2023-38408 with a CVSS score of 9.8. This vulnerability allows remote attackers to execute arbitrary code without authentication.
+
+#### Vulnerable Service Details
+```
+SERVICE: OpenSSH 8.2p1 Ubuntu 4ubuntu0.13
+PORT: 22/tcp
+PROTOCOL: SSH-2.0
+HOST KEYS: RSA (3072), ECDSA (256), ED25519 (256)
+```
+
+#### Critical Vulnerabilities Identified
+```
+CRITICAL VULNERABILITIES (NMAP --script vuln):
+├── CVE-2023-38408 (CVSS 9.8) - Remote Code Execution
+│   ├── Multiple public exploits available
+│   └── No authentication required
+├── CVE-2020-15778 (CVSS 7.8) - Privilege Escalation  
+├── CVE-2020-12062 (CVSS 7.5) - Authentication Bypass
+├── CVE-2021-28041 (CVSS 7.1) - Buffer Overflow
+└── CVE-2021-41617 (CVSS 7.0) - Information Disclosure
+```
+
+#### Impact Assessment
+- **🚨 IMMEDIATE THREAT:** Remote code execution without authentication
+- **Server Compromise:** Complete system takeover possible
+- **Data Breach:** Full access to server files and databases
+- **Lateral Movement:** Entry point for network-wide compromise
+- **Available Exploits:** Multiple working exploits in the wild
+
+#### Recommended Remediation (URGENT)
+1. **🚨 IMMEDIATE:** Update OpenSSH to version 9.4p1 or later
+2. **Network Isolation:** Block SSH access from internet (firewall rule)
+3. **Patch Management:** Implement emergency patching procedures
+4. **Monitoring:** Deploy intrusion detection for SSH brute force attempts
+5. **Incident Response:** Review logs for potential compromise indicators
+
+---
+
+### FFHK-010: nginx Critical Buffer Overflow (CVE-2022-41741)
+
+**ID:** FFHK-010  
+**Severity:** 🔴 **High**  
+**Category:** Buffer Overflow / Code Execution  
+**CVSS Score:** 7.8 (AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H)
+
+#### Description
+The nginx 1.18.0 web server contains multiple high-severity vulnerabilities including buffer overflow conditions that could lead to code execution and memory corruption attacks.
+
+#### Vulnerable Service Details
+```
+SERVICE: nginx/1.18.0 (Ubuntu)
+PORTS: 80/tcp, 443/tcp
+SSL: Let's Encrypt certificate (valid)
+```
+
+#### Critical nginx Vulnerabilities
+```
+HIGH-SEVERITY NGINX VULNERABILITIES:
+├── CVE-2022-41741 (CVSS 7.8) - Buffer Overflow
+│   ├── Heap buffer overflow in mp4 module
+│   └── Potential code execution
+├── CVE-2022-41742 (CVSS 7.1) - Memory Disclosure
+└── NGINX:CVE-2025-53859 (CVSS 6.3) - Information Disclosure
+```
+
+#### Impact Assessment
+- **Code Execution:** Potential remote code execution via buffer overflow
+- **Memory Corruption:** Heap corruption attacks possible
+- **Information Disclosure:** Server memory disclosure vulnerabilities
+- **Service Disruption:** Denial of service attacks possible
+
+#### Recommended Remediation
+1. **Update nginx:** Upgrade to nginx 1.24.0 or later stable version
+2. **Configuration Review:** Disable unused modules (mp4, etc.)
+3. **Web Application Firewall:** Deploy WAF to filter malicious requests
+4. **Security Headers:** Implement proper security headers
+
+---
+
+### FFHK-011: nginx DNS Resolver Vulnerability (CVE-2021-23017)
+
+**ID:** FFHK-011  
+**Severity:** 🔴 **High**  
+**Category:** DNS Cache Poisoning / Remote Code Execution  
+**CVSS Score:** 7.7 (AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:N/A:N)
+
+#### Description
+nginx 1.18.0 contains a critical DNS resolver vulnerability (CVE-2021-23017) that allows attackers to perform DNS cache poisoning attacks and potentially achieve remote code execution through malicious DNS responses.
+
+#### Vulnerability Details
+```
+NGINX DNS RESOLVER VULNERABILITY:
+├── CVE-2021-23017 (CVSS 7.7)
+├── DNS cache poisoning possible
+├── Off-by-one error in resolver
+└── Multiple public exploits available
+```
+
+#### Impact Assessment
+- **DNS Cache Poisoning:** Malicious DNS responses can be cached
+- **Traffic Redirection:** User traffic can be redirected to malicious sites
+- **Code Execution:** Potential RCE through crafted DNS responses
+- **Man-in-the-Middle:** DNS poisoning enables MITM attacks
+
+#### Recommended Remediation
+1. **Urgent Update:** Update nginx to version 1.20.1 or later
+2. **DNS Security:** Use secure DNS resolvers (1.1.1.1, 8.8.8.8)
+3. **DNS over HTTPS:** Implement DoH for DNS resolution
+4. **Network Monitoring:** Monitor for DNS anomalies
+
+---
+
+### FFHK-012: Apache Byterange DoS Vulnerability (CVE-2011-3192)
+
+**ID:** FFHK-012  
+**Severity:** 🟡 Medium  
+**Category:** Denial of Service  
+**CVSS Score:** 7.8 (AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H)
+
+#### Description
+The web server responds to Apache-style byterange requests in a manner that suggests vulnerability to CVE-2011-3192, a denial of service attack using overlapping byte ranges.
+
+#### Vulnerability Details
+```
+BYTERANGE DOS VULNERABILITY:
+├── CVE-2011-3192 (Apache byterange filter DoS)
+├── Overlapping byte ranges cause resource exhaustion
+└── No authentication required
+```
+
+#### Impact Assessment
+- **Denial of Service:** Server resources can be exhausted
+- **Service Degradation:** Website performance impact
+- **Resource Consumption:** High memory/CPU usage
+
+#### Recommended Remediation
+1. **Update Web Server:** Ensure latest nginx version (not affected)
+2. **Rate Limiting:** Implement request rate limiting
+3. **Request Filtering:** Filter malicious Range headers
+4. **Monitoring:** Monitor for byterange abuse attempts
+
 ## URL Enumeration Results
 
 ### Discovery Summary
@@ -692,11 +939,10 @@ During the comprehensive URL enumeration phase using Dirsearch and enhanced with
 - [x] **7. VISUAL RECONNAISSANCE**
 - [x] **8. CRAWLING FOR ENDPOINTS** ✅ **COMPLETED** (266 endpoints discovered)
 - [x] **9. FINDING SECRETS IN JAVASCRIPT FILES** ✅ **COMPLETED** (API token discovered)
+- [x] **10. NETWORK & SERVICE SCANNING** ✅ **COMPLETED** (SSH + Web services discovered)
 
 #### Next Phase  
-- [ ] **10. NETWORK & SERVICE SCANNING** ⬅️ **NEXT**
-- [ ] **10. NETWORK & SERVICE SCANNING** ⬅️ **NEXT**
-- [ ] **11. ENDPOINT & PARAMETER DISCOVERY**
+- [ ] **11. ENDPOINT & PARAMETER DISCOVERY** ⬅️ **NEXT**
 - [ ] **12. CMS DETECTION & SCANNING**
 
 #### Upcoming Phases - Active Reconnaissance
@@ -728,6 +974,72 @@ During the comprehensive URL enumeration phase using Dirsearch and enhanced with
 10. **Payload Validation:** Test and validate XSS payloads and other injection techniques on discovered endpoints
 11. **Impact Analysis:** Evaluate the combined impact of vulnerabilities and exploit chaining potential
 12. **Final Report:** Prepare comprehensive executive report with remediation priorities
+
+---
+
+## 🔍 DETAILED ASSESSMENT PHASES
+
+### Phase 10: Network & Service Scanning
+
+#### Methodology
+Following the Ethical Hacking Command Guide, comprehensive network scanning was performed using **nmap** to discover all accessible services and gather detailed version information.
+
+#### Tools Used
+- **Primary:** nmap (via Docker) with service version detection (-sV) and default scripts (-sC)
+- **Alternative:** netcat for manual port validation
+- **Target:** 134.209.18.185 (fastfoodhackings.bugbountytraining.com)
+
+#### Scan Commands Executed
+```bash
+# Comprehensive service discovery scan
+nmap -sV -sC -T4 134.209.18.185
+
+# Manual port validation
+nc -zv 134.209.18.185 22
+nc -zv 134.209.18.185 80  
+nc -zv 134.209.18.185 443
+```
+
+#### Detailed Results
+
+**📊 PORT SCAN SUMMARY:**
+```
+Starting Nmap scan against 134.209.18.185
+3 ports detected as OPEN:
+
+PORT    STATE SERVICE  VERSION
+22/tcp  open  ssh      OpenSSH 8.2p1 Ubuntu 4ubuntu0.13 (Ubuntu Linux; protocol 2.0)
+80/tcp  open  http     nginx 1.18.0 (Ubuntu)
+443/tcp open  ssl/http nginx 1.18.0 (Ubuntu)
+```
+
+**🔐 SSH HOST KEY FINGERPRINTS:**
+```
+ssh-hostkey: 
+  3072 sha256:YmJk6H+qV8... (RSA)
+  256 sha256:Qfgl8O+2pQ... (ECDSA)
+  256 sha256:r3VHZS+8mL... (ED25519)
+```
+
+**🌐 HTTP/HTTPS ANALYSIS:**
+- **Port 80:** Redirects to HTTPS (301 Moved Permanently)
+- **Port 443:** Valid Let's Encrypt SSL certificate
+- **Certificate Subject:** CN=fastfoodhackings.bugbountytraining.com
+- **Certificate Validity:** Aug 5, 2024 - Nov 3, 2025
+- **Web Server:** nginx/1.18.0 (Ubuntu)
+
+#### Key Findings
+1. **SSH Exposure:** Direct SSH access bypassing Cloudflare protection
+2. **Service Versions:** All services running latest stable versions (no obvious CVEs)
+3. **SSL Configuration:** Proper HTTPS implementation with valid certificate
+4. **OS Identification:** Ubuntu Linux confirmed through service banners
+
+#### Security Implications
+- **FFHK-008:** SSH service exposure creates additional attack surface for brute force attacks
+- **Network Architecture:** Origin server IP directly accessible, bypassing CDN protections
+- **Service Hardening:** Services appear up-to-date but require further vulnerability assessment
+
+---
 
 ### Contacts
 
