@@ -26,7 +26,7 @@ This document provides a simple and detailed explanation of common commands and 
     
     9.  [FINDING SECRETS IN JAVASCRIPT FILES](#9-finding-secrets-in-javascript-files) (linkfinder, gf, SecretFinder)
     
-    10. [NETWORK & SERVICE SCANNING](#10-network--service-scanning) (nmap, masscan)
+    10. [NETWORK & SERVICE SCANNING](#10-network--service-scanning) (nmap)
     
     11. [ENDPOINT & PARAMETER DISCOVERY](#11-endpoint--parameter-discovery) (paramspider, arjun)
     
@@ -209,14 +209,11 @@ This phase involves direct interaction with the targets you discovered to map th
 
 *   **Technique Type:** Active Reconnaissance
 *   **Description:** This process checks all open "ports" on a server, not just the website, to find other services like databases or FTP.
-*   **Tools:** masscan, nmap
-*   **The Workflow:**
+*   **Tool:** nmap
+*   **The Command:**
     ```bash
-    # Step 1 (Optional but recommended): Find all open ports very quickly
-    masscan -p1-65535 [TARGET_IP] --rate 100000 --oL open_ports.txt
-
-    # Step 2: Run a detailed scan on the open ports to identify services
-    nmap -p $(cat open_ports.txt | awk -F " " '{print $4}' | tr '\n' ',') -sV -sC -T4 [TARGET_IP]
+    # Scan for open ports and identify services
+    nmap -p- -sV -sC -T4 [TARGET_IP]
     ```
 *   **Why It's Useful:** A server may be running a secure website on port 443, but have an old, vulnerable FTP server on another port.
 
